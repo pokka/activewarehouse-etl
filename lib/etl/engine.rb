@@ -19,8 +19,6 @@ module ETL #:nodoc:
       # * <tt>:rails_root</tt>: Set to the rails root to boot rails
       def init(options={})
         unless @initialized
-          @settings = options[:settings] || {}
-
           puts "initializing ETL engine\n\n"
           @limit = options[:limit]
           @offset = options[:offset]
@@ -54,8 +52,8 @@ module ETL #:nodoc:
       #
       # The process command will accept either a .ctl or .ctl.rb for a Control file or a .ebf
       #  or .ebf.rb for an ETL Batch File.
-      def process(file)
-        new().process(file)
+      def process(file, settings={})
+        new(settings).process(file)
       end
       
       attr_accessor :timestamped_log
@@ -216,6 +214,12 @@ module ETL #:nodoc:
       end
     end # class << self
     
+    attr_reader :settings
+
+    def initialize(settings={})
+      @settings = settings
+    end
+
     # Say the specified message, with a newline
     def say(message)
       say_without_newline(message + "\n")
@@ -307,9 +311,9 @@ module ETL #:nodoc:
       ETL::Engine.batch.save!
     end
     
-    # Process the specified control file
+    # Process the specified control filequi
     def process_control(control)
-      control = ETL::Control::Control.resolve(control)
+      control = ETL::Control::Control.resolve(control, self)
       say_on_own_line "Processing control #{control.file}"
       
       ETL::Engine.job = ETL::Execution::Job.new.tap do |job|
