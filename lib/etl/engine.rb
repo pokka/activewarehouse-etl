@@ -19,6 +19,8 @@ module ETL #:nodoc:
       # * <tt>:rails_root</tt>: Set to the rails root to boot rails
       def init(options={})
         unless @initialized
+          @settings = options[:settings] || {}
+
           puts "initializing ETL engine\n\n"
           @limit = options[:limit]
           @offset = options[:offset]
@@ -36,7 +38,8 @@ module ETL #:nodoc:
           #puts "configurations in init: #{ActiveRecord::Base.configurations.inspect}"
           
           require 'etl/execution'
-          ETL::Execution::Base.establish_connection :etl_execution
+          # ETL::Execution::Base.establish_connection :etl_execution
+          ActiveRecord::Base.establish_connection :etl_execution
           ETL::Execution::Execution.migrate
 
           @initialized = true
@@ -502,7 +505,7 @@ module ETL #:nodoc:
 #         say "Avg #{klass}: #{Engine.rows_read/t} rows/sec"
 #       end
 
-      ActiveRecord::Base.verify_active_connections!
+      ActiveRecord::Base.clear_active_connections!
       ETL::Engine.job.completed_at = Time.now
       ETL::Engine.job.status = (errors.length > 0 ? 'completed with errors' : 'completed')
       ETL::Engine.job.save!
