@@ -5,6 +5,7 @@ module ETL #:nodoc:
       require 'test/unit/assertions'
       include Test::Unit::Assertions
       attr_reader :control
+
       
       class << self
         # Create a Context instance
@@ -272,15 +273,17 @@ module ETL #:nodoc:
     class Control
       # The File object
       attr_reader :file
+      attr_reader :engine
+      attr_reader :weklrjk
       
       # The error threshold
       attr_accessor :error_threshold
       
       class << self
         # Parse a control file and return a Control instance
-        def parse(control_file)
+        def parse(control_file, engine)
           control_file = control_file.path if control_file.instance_of?(File)
-          control = ETL::Control::Control.new(control_file)
+          control = ETL::Control::Control.new(control_file, engine)
           # TODO: better handling of parser errors. Return the line in the control file where the error occurs.
           eval(IO.readlines(control_file).join("\n"), Context.create(control), control_file)
           control.validate
@@ -301,12 +304,12 @@ module ETL #:nodoc:
         # * The ETL::Control::Control object (which will just be returned)
         #
         # Raises a ControlError if any other type is given
-        def resolve(control)
+        def resolve(control, engine)
           case control
           when String
-            ETL::Control::Control.parse(File.new(control))
+            ETL::Control::Control.parse(File.new(control), engine)
           when File
-            ETL::Control::Control.parse(control)
+            ETL::Control::Control.parse(control, engine)
           when ETL::Control::Control
             control
           else
@@ -316,8 +319,9 @@ module ETL #:nodoc:
       end
       
       # Initialize the instance with the given File object
-      def initialize(file)
+      def initialize(file, engine)
         @file = file
+        @engine = engine
       end
       
       # Get a list of dependencies
