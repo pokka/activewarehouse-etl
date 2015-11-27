@@ -83,6 +83,7 @@ class ActiveRecordResolver
 end
 
 class SQLResolver
+  attr_reader :foreign_key
   # Initialize the SQL resolver. Use the given table and field name to search
   # for the appropriate foreign key. The field should be the name of a natural
   # key that is used to locate the surrogate key for the record.
@@ -91,10 +92,11 @@ class SQLResolver
   # referencing a connection defined in the ETL database.yml file or an actual
   # ActiveRecord connection instance. If the connection is not specified then
   # the ActiveRecord::Base.connection will be used.
-  def initialize(atable, afield, connection=nil)
+  def initialize(atable, afield, foreign_key = 'id', connection=nil)
     # puts "table: #{atable.inspect} field:#{afield.inspect}"
     @table = atable
     @field = afield
+    @foreign_key = foreign_key
     @connection = (connection.respond_to?(:quote) ? connection : ETL::Engine.connection(connection)) if connection
     @connection ||= ActiveRecord::Base.connection
   end
@@ -106,7 +108,7 @@ class SQLResolver
       r = cache[value]
       # puts "resolve failed: #{value.class.name}:#{value.inspect} from: #{@table}.#{@field}" unless r
     else
-      q = "SELECT id FROM #{table_name} WHERE #{wheres(value)}"
+      q = "SELECT #{foreign_key} FROM #{table_name} WHERE #{wheres(value)}"
       # puts q
       r = @connection.select_value(q)
     end
@@ -122,14 +124,14 @@ class SQLResolver
   end
   
   def load_cache
-    q = "SELECT id, #{field.join(', ')} FROM #{table_name}"
+    q = "SELECT #{foreign_key}, #{field.join(', ')} FROM #{table_name}"
     # puts q
     @connection.select_all(q).each do |record|
       ck = @field.kind_of?(Array) ? record.values_at(*@field) : record[@field]
       # puts "load_cache key: #{ck.class.name}:#{ck.inspect}"
       # puts "  #{@field.class.name}:#{@field.inspect}"
       # puts "  #{record[@field].class.name}:#{record[@field].inspect}"
-      cache[ck] = record['id']
+      cache[ck] = record[foreign_key]
     end
     @use_cache = true
   end
@@ -154,7 +156,7 @@ end
 
 class IncrementalCacheSQLResolver < SQLResolver
 
-  def initialize(atable, afield, connection=nil)
+  def initialize(atable, afield, foreign_key='id', connection=nil)
     super
   end
   
@@ -162,7 +164,7 @@ class IncrementalCacheSQLResolver < SQLResolver
     return nil if value.nil?
     r = cache[value]
     unless r
-      q = "SELECT id FROM #{table_name} WHERE #{wheres(value)}"
+      q = "SELECT #{foreign_key} FROM #{table_name} WHERE #{wheres(value)}"
       r = @connection.select_value(q)
       if r
         cache[value] = r
